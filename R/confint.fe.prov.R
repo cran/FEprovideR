@@ -5,8 +5,9 @@
 #' \href{https://github.com/umich-biostatistics/FEprovideR}{Github} for a tutorial.
 #'
 #' @param object fitted model object (fit using \code{fe.prov})
-#' @param parm parameter names. Since their are so many parameters, the default is
-#'  \code{"all"}, which is currently the only option available
+#' @param parm provider IDs for which confidence intervals are desired. The default
+#' is \code{"all"}. Specify a subset of privider effects with a numeric vector of
+#' provider IDs. For example, \code{parm=c(1,20)} for providers 1 and 20.
 #' @param level confidence level (default is \code{0.95})
 #' @param data prepared \code{data.frame}. Use \code{\link{fe.data.prep}} to prepare the raw data
 #' @param Y.char Y.char name of the response variable from \code{data} as a character string
@@ -45,8 +46,21 @@
 #' @export
 
 confint.fe.prov <- function(object, parm = "all", level = 0.95, data, Y.char, Z.char, prov.char,...) {
-  if(!is.null(parm) & !(parm == "all")) stop("This method is only implemented for all parameters.
-                            You cannot get CI's for a subset.")
+  prov.all <- unique(data[data$included==1,prov.char])
+  if(is.null(parm) | identical(parm,"all")) {
+    data <- data[data$included==1, ]
+  } else {
+    presence.parm <- parm %in% prov.all
+    if (max(presence.parm)==0) {
+      stop("All provider ID(s) misspecified!", call.=F)
+    } else if (length(parm[!presence.parm])==0) {
+      data <- data[data[,prov.char] %in% parm[presence.parm], ]
+    } else {
+      warning("Provider ID(s) '",paste(parm[!presence.parm], collapse="', '"),
+              "' misspecified with no confidence intervals!", call.=F, immediate.=T)
+      data <- data[data[,prov.char] %in% parm[presence.parm], ]
+    }
+  }
   fe.ls <- object
   alpha <- 1 - level
   data <- data[data$included==1, ]
@@ -57,9 +71,9 @@ confint.fe.prov <- function(object, parm = "all", level = 0.95, data, Y.char, Z.
 
   CL.finite <- function(df) {
     UL.gamma <- function(Gamma)
-      ppoibin(Obs-1,plogis(Gamma+Z.beta))+0.5*dpoibin(Obs-1,plogis(Gamma+Z.beta))-alpha/2
+      ppoibin(Obs-1,plogis(Gamma+Z.beta))+0.5*dpoibin(Obs,plogis(Gamma+Z.beta))-alpha/2
     LL.gamma <- function(Gamma)
-      1-ppoibin(Obs,plogis(Gamma+Z.beta))+0.5*dpoibin(Obs-1,plogis(Gamma+Z.beta))-alpha/2
+      1-ppoibin(Obs,plogis(Gamma+Z.beta))+0.5*dpoibin(Obs,plogis(Gamma+Z.beta))-alpha/2
     prov <- ifelse(length(unique(df[,prov.char]))==1, unique(df[,prov.char]),
                    stop("Number of providers involved NOT equal to one!"))
     Z.beta <- as.matrix(df[,Z.char])%*%beta

@@ -10,8 +10,9 @@
 \arguments{
 \item{object}{fitted model object (fit using \code{fe.prov})}
 
-\item{parm}{parameter names. Since their are so many parameters, the default is
-\code{"all"}, which is currently the only option available}
+\item{parm}{provider IDs for which confidence intervals are desired. The default
+is \code{"all"}. Specify a subset of privider effects with a numeric vector of
+provider IDs. For example, \code{parm=c(1,20)} for providers 1 and 20.}
 
 \item{level}{confidence level (default is \code{0.95})}
 
